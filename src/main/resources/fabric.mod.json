@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 1,
+  "id": "goatwoolfabric",
+  "version": "${version}",
+  "name": "Goatwoolfabric",
+  "description": "You can now get wool from goats!",
+  "authors": [
+    "KaloyanKYS"
+  ],
+  "contact": {},
+  "license": "MIT",
+  "icon": "assets/goatwoolfabric/icon.png",
+  "environment": "*",
+  "entrypoints": {
+    "client": [
+      "me.kaloyankys.goatwoolfabric.client.GoatwoolfabricClient"
+    ],
+    "main": [
+      "me.kaloyankys.goatwoolfabric.Goatwoolfabric"
+    ]
+  },
+  "mixins": [
+    "goatwoolfabric.mixins.json"
+  ],
+  "depends": {
+    "fabricloader": ">=0.11.3",
+    "minecraft": "1.17"
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "package": "me.kaloyankys.goatwoolfabric.mixin",
+  "compatibilityLevel": "JAVA_8",
+  "mixins": [
+    "GoatMixin"
+  ],
+  "client": [
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}
