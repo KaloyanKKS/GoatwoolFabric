@@ -5,18 +5,20 @@
   "name": "Goatwoolfabric",
   "description": "You can now get wool from goats!",
   "authors": [
-    "KaloyanKYS"
+    "KaloyanKYS",
+    "JoeMama",
+    "DigitalPear",
+    "BrianComics"
   ],
   "contact": {},
   "license": "MIT",
-  "icon": "assets/goatwoolfabric/icon.png",
   "environment": "*",
   "entrypoints": {
     "client": [
-      "me.kaloyankys.goatwoolfabric.client.GoatwoolfabricClient"
+      "io.github.llamarama.team.goatwoolfabric.client.GoatWoolFabricClient"
     ],
     "main": [
-      "me.kaloyankys.goatwoolfabric.Goatwoolfabric"
+      "io.github.llamarama.team.goatwoolfabric.GoatWoolFabric"
     ]
   },
   "mixins": [
