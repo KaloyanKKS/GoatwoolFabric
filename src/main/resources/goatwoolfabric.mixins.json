@@ -1,12 +1,13 @@
 {
   "required": true,
   "minVersion": "0.8",
-  "package": "me.kaloyankys.goatwoolfabric.mixin",
-  "compatibilityLevel": "JAVA_8",
+  "package": "io.github.llamarama.team.goatwoolfabric.mixin",
+  "compatibilityLevel": "JAVA_16",
   "mixins": [
-    "GoatMixin"
+    "GoatEntityMixin"
   ],
   "client": [
+    "client.GoatEntityModelMixin"
   ],
   "injectors": {
     "defaultRequire": 1
