@@ -1,5 +1,6 @@
 package io.github.llamarama.team.goatwoolfabric.mixin;
 
+import io.github.llamarama.team.goatwoolfabric.util.ShearableGoat;
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.ItemEntity;
 import net.minecraft.entity.Shearable;
@@ -11,6 +12,7 @@ import net.minecraft.entity.passive.GoatEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
+import net.minecraft.nbt.NbtCompound;
 import net.minecraft.particle.ParticleTypes;
 import net.minecraft.sound.SoundCategory;
 import net.minecraft.sound.SoundEvents;
@@ -24,11 +26,12 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 @Mixin(GoatEntity.class)
-public abstract class GoatEntityMixin extends AnimalEntity implements Shearable {
+public abstract class MixinGoatEntity extends AnimalEntity implements Shearable, ShearableGoat {
 
     private static final TrackedData<Boolean> SHEARED = DataTracker.registerData(GoatEntity.class, TrackedDataHandlerRegistry.BOOLEAN);
+    private static final String SHEARED_KEY = "Sheared";
 
-    public GoatEntityMixin(EntityType<? extends GoatEntity> entityType, World world) {
+    public MixinGoatEntity(EntityType<? extends GoatEntity> entityType, World world) {
         super(entityType, world);
     }
 
@@ -37,27 +40,41 @@ public abstract class GoatEntityMixin extends AnimalEntity implements Shearable 
         this.dataTracker.startTracking(SHEARED, false);
     }
 
+    @Override
     public boolean getSheared() {
         return this.dataTracker.get(SHEARED);
     }
 
+    @Override
     public void setSheared(boolean sheared) {
         this.dataTracker.set(SHEARED, sheared);
     }
 
-    @Inject(method = "interactMob", at = @At("TAIL"))
+    @Inject(method = "interactMob", at = @At("HEAD"), cancellable = true)
     public void interactWithMob(PlayerEntity player, Hand hand, CallbackInfoReturnable<ActionResult> cir) {
         if (!this.world.isClient) {
             ItemStack itemStack = player.getStackInHand(hand);
             if (itemStack.isOf(Items.SHEARS) && this.isShearable()) {
                 itemStack.damage(1, player, playerEntity -> playerEntity.sendToolBreakStatus(hand));
                 this.sheared(SoundCategory.PLAYERS);
+                cir.setReturnValue(ActionResult.SUCCESS);
             }
             if (itemStack.isOf(Items.WHEAT) && !this.isShearable()) {
                 itemStack.decrement(1);
                 this.feed();
+                cir.setReturnValue(ActionResult.SUCCESS);
             }
         }
+    }
+
+    @Inject(method = "writeCustomDataToNbt", at = @At("TAIL"))
+    private void writeCustomData(NbtCompound nbt, CallbackInfo ci) {
+        nbt.putBoolean(SHEARED_KEY, this.getSheared());
+    }
+
+    @Inject(method = "readCustomDataFromNbt", at = @At("TAIL"))
+    private void readCustomData(NbtCompound nbt, CallbackInfo ci) {
+        this.setSheared(nbt.getBoolean(SHEARED_KEY));
     }
 
     public void feed() {
