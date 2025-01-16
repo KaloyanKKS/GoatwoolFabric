@@ -14,12 +14,14 @@ import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.particle.ParticleTypes;
+import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.SoundCategory;
 import net.minecraft.sound.SoundEvents;
 import net.minecraft.util.ActionResult;
 import net.minecraft.util.Hand;
 import net.minecraft.world.World;
 import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
@@ -31,35 +33,34 @@ public abstract class MixinGoatEntity extends AnimalEntity implements Shearable,
     private static final TrackedData<Boolean> SHEARED = DataTracker.registerData(GoatEntity.class, TrackedDataHandlerRegistry.BOOLEAN);
     private static final String SHEARED_KEY = "Sheared";
 
-    public MixinGoatEntity(EntityType<? extends GoatEntity> entityType, World world) {
+    protected MixinGoatEntity(EntityType<? extends AnimalEntity> entityType, World world) {
         super(entityType, world);
     }
 
-    @Inject(method = "initDataTracker", at = @At("TAIL"))
-    private void addShearedData(CallbackInfo ci) {
-        this.dataTracker.startTracking(SHEARED, false);
+    @Inject(method = {"initDataTracker"}, at = {@At("TAIL")})
+    private void addShearedData(DataTracker.Builder builder, CallbackInfo ci) {
+        builder.add(SHEARED, false);
     }
 
-    @Override
     public boolean getSheared() {
         return this.dataTracker.get(SHEARED);
     }
 
-    @Override
     public void setSheared(boolean sheared) {
         this.dataTracker.set(SHEARED, sheared);
     }
 
-    @Inject(method = "interactMob", at = @At("HEAD"), cancellable = true)
+    @Inject(method = {"interactMob"}, at = {@At("HEAD")}, cancellable = true)
     public void interactWithMob(PlayerEntity player, Hand hand, CallbackInfoReturnable<ActionResult> cir) {
-        if (!this.world.isClient) {
+        if (!this.getWorld().isClient) {
             ItemStack itemStack = player.getStackInHand(hand);
             if (itemStack.isOf(Items.SHEARS) && this.isShearable()) {
-                itemStack.damage(1, player, playerEntity -> playerEntity.sendToolBreakStatus(hand));
-                this.sheared(SoundCategory.PLAYERS);
+                itemStack.damage(1, player);
+                this.sheared((ServerWorld) this.getWorld(), SoundCategory.PLAYERS, itemStack);
                 cir.setReturnValue(ActionResult.SUCCESS);
             }
-            if (itemStack.isOf(Items.WHEAT) && !this.isShearable()) {
+
+            if (this.isBreedingItem(itemStack) && !this.isShearable()) {
                 itemStack.decrement(1);
                 this.feed();
                 cir.setReturnValue(ActionResult.SUCCESS);
@@ -67,36 +68,29 @@ public abstract class MixinGoatEntity extends AnimalEntity implements Shearable,
         }
     }
 
-    @Inject(method = "writeCustomDataToNbt", at = @At("TAIL"))
+    @Inject(method = {"writeCustomDataToNbt"}, at = {@At("TAIL")})
     private void writeCustomData(NbtCompound nbt, CallbackInfo ci) {
         nbt.putBoolean(SHEARED_KEY, this.getSheared());
     }
 
-    @Inject(method = "readCustomDataFromNbt", at = @At("TAIL"))
+    @Inject(method = {"readCustomDataFromNbt"}, at = {@At("TAIL")})
     private void readCustomData(NbtCompound nbt, CallbackInfo ci) {
         this.setSheared(nbt.getBoolean(SHEARED_KEY));
     }
 
+    @Unique
     public void feed() {
-        this.world.playSound(
-                this.getX(), this.getY(), this.getZ(),
-                SoundEvents.ENTITY_GOAT_EAT, SoundCategory.NEUTRAL, 1.0f, 1.0f, false);
-        this.world.addParticle(ParticleTypes.HAPPY_VILLAGER, 0, 0, 0, 0.1, -0.3, 0.1);
+        this.getWorld().playSound(this.getX(), this.getY(), this.getZ(), SoundEvents.ENTITY_GOAT_EAT, SoundCategory.NEUTRAL, 1.0F, 1.0F, false);
+        this.getWorld().addParticle(ParticleTypes.HAPPY_VILLAGER, 0.0, 0.0, 0.0, 0.1, -0.3, 0.1);
         this.setSheared(false);
     }
 
     @Override
-    public void sheared(SoundCategory shearedSoundCategory) {
+    public void sheared(ServerWorld world, SoundCategory shearedSoundCategory, ItemStack shears) {
         this.setSheared(true);
-        this.world.playSound(this.getX(), this.getY(), this.getZ(),
-                SoundEvents.ENTITY_SHEEP_SHEAR,
-                shearedSoundCategory, 1.0f, 1.0f, false);
-
-        ItemEntity item = new ItemEntity(this.world,
-                this.getX(), this.getY(), this.getZ(),
-                new ItemStack(Items.WHITE_WOOL, 1 + this.random.nextInt(2)));
-
-        this.world.spawnEntity(item);
+        world.playSound(this.getX(), this.getY(), this.getZ(), SoundEvents.ENTITY_SHEEP_SHEAR, shearedSoundCategory, 1.0F, 1.0F, false);
+        ItemEntity item = new ItemEntity(this.getWorld(), this.getX(), this.getY(), this.getZ(), new ItemStack(Items.WHITE_WOOL, 1 + this.random.nextInt(2)));
+        world.spawnEntity(item);
     }
 
     @Override
@@ -104,4 +98,8 @@ public abstract class MixinGoatEntity extends AnimalEntity implements Shearable,
         return !this.getSheared() && !this.isBaby();
     }
 
+    @Override
+    public boolean isBreedingItem(ItemStack stack) {
+        return stack.isOf(Items.WHEAT);
+    }
 }
